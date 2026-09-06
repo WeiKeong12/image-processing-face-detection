@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graphics Programming - Image Processing Application</title>
+
+    <link rel="stylesheet" href="styles.css">
+
+    <script src="https://unpkg.com/ml5@1/dist/ml5.min.js"></script>
+    <script src="./scripts/helper-api/p5.min.js"></script>
+    
+    <script defer src="./scripts/FaceDetector.js"></script>
+    <script defer src="./scripts/FaceFilters.js"></script>
+    <script defer src="./scripts/FileHandler.js"></script>
+    <script defer src="./scripts/ImageProcessing.js"></script>
+    <script defer src="./scripts/ImageProcessor.js"></script>
+    <script defer src="./scripts/WebcamController.js"></script>
+
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Advanced Image Processing</h1>
+            <p>Computer Vision & Face Detection with Threshold Analysis</p>
+        </div>
+
+        <div class="main-content">
+            <div class="sidebar">
+                <div class="control-section">
+                    <h3>Camera Controls</h3>
+                    <!-- Camera preview moved to main grid, only controls remain here -->
+                    <video id="video" autoplay muted></video>
+                    
+                    <button id="startPreviewBtn" class="btn">Start Preview</button>
+                    <button id="stopPreviewBtn" class="btn danger" style="display: none;">Stop Preview</button>
+                    <button id="captureBtn" class="btn success">Capture Image</button>
+                    
+                    <div class="keyboard-hint">
+                        <strong>Shortcuts:</strong><br>
+                        Space/Enter: Capture<br>
+                        P: Toggle Preview
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>File Upload</h3>
+                    <div class="upload-area">
+                        <input type="file" id="imageUpload" class="file-input" accept="image/*">
+                        <label for="imageUpload" class="file-label">Choose Image</label>
+                        <p style="margin-top: 10px; font-size: 0.9em; color: #6c757d;">
+                            Or drag & drop an image anywhere
+                        </p>
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Face Filters</h3>
+                    <div class="face-controls">
+                        <button id="faceKey1" class="face-key">1. Grayscale</button>
+                        <button id="faceKey2" class="face-key">2. Blur</button>
+                        <button id="faceKey3" class="face-key">3. Color Shift</button>
+                        <button id="faceKey4" class="face-key">4. Pixelate</button>
+                    </div>
+                    
+                    <div class="keyboard-hint">
+                        <strong>Shortcuts:</strong> Press 1-4 keys
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Built-in Overlays</h3>
+                    <div class="overlay-controls">
+                        <button id="overlayKey5" class="overlay-key">5. Dog Ears</button>
+                        <button id="overlayKey6" class="overlay-key">6. Cat Ears</button>
+                        <button id="overlayKey7" class="overlay-key">7. Sunglasses</button>
+                        <button id="overlayKey8" class="overlay-key">8. Crown</button>
+                    </div>
+                    
+                    <div class="keyboard-hint">
+                        <strong>Shortcuts:</strong> Press 5-8 keys
+                    </div>
+                </div>
+
+                <div class="control-section">
+                    <h3>Custom PNG Overlays</h3>
+                    
+                    <div class="upload-area small">
+                        <input type="file" id="customOverlayUpload" class="file-input" accept="image/png,image/jpeg,image/gif">
+                        <label for="customOverlayUpload" class="file-label small">Upload PNG Overlay</label>
+                    </div>
+
+                    <div class="position-selector-container">
+                        <label for="overlayPosition">Position:</label>
+                        <select id="overlayPosition" class="position-selector">
+                            <option value="above_head">Above Head (ears, crown)</option>
+                            <option value="eyes">Eyes (sunglasses, mask)</option>
+                            <option value="mouth">Mouth (mustache, smile)</option>
+                            <option value="full_face">Full Face (mask)</option>
+                        </select>
+                    </div>
+
+                    <div class="scale-control">
+                        <label>Scale:</label>
+                        <input type="range" id="overlayScale" min="0.5" max="2.0" step="0.1" value="1.0">
+                        <span id="scaleValue">1.0x</span>
+                    </div>
+
+                    <div id="customOverlayList">
+                        <!-- Custom overlays will be listed here -->
+                    </div>
+
+                    <div class="keyboard-hint">
+                        <strong>Tips:</strong><br>
+                        • Use PNG files with transparency<br>
+                        • Recommended size: 200-500px<br>
+                        • Choose appropriate position
+                    </div>
+                </div>
+            </div>
+
+            <div class="content-area">
+                <div class="image-grid">
+                    <!-- First Row: Original Image and Grayscale -->
+                    <div class="image-item">
+                        <h4>Original Image</h4>
+                        <canvas id="webcamCanvas" class="image-canvas" width="160" height="120"></canvas>
+                    </div>
+                    <div class="image-item">
+                        <h4>Grayscale (+20%)</h4>
+                        <canvas id="grayscaleCanvas" class="image-canvas" width="160" height="120"></canvas>
+                    </div>
+                    <!-- NEW: Camera Preview in third position of first row -->
+                    <div class="image-item camera-preview-item">
+                        <h4>Live Camera Preview</h4>
+                        <div class="preview-wrapper">
+                            <div class="preview-container">
+                                <video id="livePreview" autoplay muted></video>
+                                <canvas id="previewCanvas" style="display: none;"></canvas>
+                                <div id="previewOverlay" class="preview-overlay">
+                                    <div class="preview-message">
+                                        <p>Click "Start Preview" to begin</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Second Row: RGB Channels -->
+                    <div class="image-item">
+                        <h4>Red Channel</h4>
+                        <canvas id="redChannelCanvas" class="image-canvas" width="160" height="120"></canvas>
+                    </div>
+                    <div class="image-item">
+                        <h4>Green Channel</h4>
+                        <canvas id="greenChannelCanvas" class="image-canvas" width="160" height="120"></canvas>
+                    </div>
+                    <div class="image-item">
+                        <h4>Blue Channel</h4>
+                        <canvas id="blueChannelCanvas" class="image-canvas" width="160" height="120"></canvas>
+                    </div>
+
+                    <!-- Third Row: RGB Thresholds with sliders -->
+                    <div class="image-item">
+                        <h4>Red Threshold</h4>
+                        <canvas id="redThresholdCanvas" class="image-canvas" width="160" height="120"></canvas>
+                        <div class="threshold-slider">
+                            <label for="redThreshold">Red Threshold</label>
+                            <div class="slider-container">
+                                <input type="range" id="redThreshold" class="slider" min="0" max="255" value="128">
+                                <span id="redValue" class="slider-value">128</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="image-item">
+                        <h4>Green Threshold</h4>
+                        <canvas id="greenThresholdCanvas" class="image-canvas" width="160" height="120"></canvas>
+                        <div class="threshold-slider">
+                            <label for="greenThreshold">Green Threshold</label>
+                            <div class="slider-container">
+                                <input type="range" id="greenThreshold" class="slider" min="0" max="255" value="128">
+                                <span id="greenValue" class="slider-value">128</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="image-item">
+                        <h4>Blue Threshold</h4>
+                        <canvas id="blueThresholdCanvas" class="image-canvas" width="160" height="120"></canvas>
+                        <div class="threshold-slider">
+                            <label for="blueThreshold">Blue Threshold</label>
+                            <div class="slider-container">
+                                <input type="range" id="blueThreshold" class="slider" min="0" max="255" value="128">
+                                <span id="blueValue" class="slider-value">128</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Fourth Row: Color Spaces -->
+                    <div class="image-item">
+                        <h4>Original (Copy)</h4>
+                        <canvas id="webcamCanvas2" class="image-canvas" width="160" height="120"></canvas>
+                    </div>
+                    <div class="image-item">
+                        <h4>HSV Color Space</h4>
+                        <canvas id="colorSpace1Canvas" class="image-canvas" width="160" height="120"></canvas>
+                    </div>
+                    <div class="image-item">
+                        <h4>YCbCr Color Space</h4>
+                        <canvas id="colorSpace2Canvas" class="image-canvas" width="160" height="120"></canvas>
+                    </div>
+
+                    <!-- Fifth Row: Face Detection and Color Space Thresholds -->
+                    <div class="image-item">
+                        <h4>Face Detection</h4>
+                        <canvas id="faceDetectionCanvas" class="image-canvas" width="160" height="120"></canvas>
+                    </div>
+                    <div class="image-item">
+                        <h4>HSV Threshold</h4>
+                        <canvas id="cs1ThresholdCanvas" class="image-canvas" width="160" height="120"></canvas>
+                        <div class="threshold-slider">
+                            <label for="colorSpace1Threshold">HSV Threshold</label>
+                            <div class="slider-container">
+                                <input type="range" id="colorSpace1Threshold" class="slider" min="0" max="255" value="128">
+                                <span id="cs1Value" class="slider-value">128</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="image-item">
+                        <h4>YCbCr Threshold</h4>
+                        <canvas id="cs2ThresholdCanvas" class="image-canvas" width="160" height="120"></canvas>
+                        <div class="threshold-slider">
+                            <label for="colorSpace2Threshold">YCbCr Threshold</label>
+                            <div class="slider-container">
+                                <input type="range" id="colorSpace2Threshold" class="slider" min="0" max="255" value="128">
+                                <span id="cs2Value" class="slider-value">128</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sixth Row: Face Overlays -->
+                    <div class="image-item">
+                        <h4>PNG Face Overlays</h4>
+                        <canvas id="faceOverlayCanvas" class="image-canvas" width="160" height="120"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
